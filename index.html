@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+  <title>reCaptcha Enterprise</title>
+  <script src="https://www.google.com/recaptcha/enterprise.js" async defer></script>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; }
+  </style>
+</head>
+<body>
+  <h2>reCaptcha Enterprise</h2>
+
+  <div id="captcha-container"
+       class="g-recaptcha"
+       data-sitekey="6LdGhvEsAAAAAMzl2zaR9XOgWHrrjUJIaJelbqDB"
+       data-callback="onCaptchaSolved"
+       data-expired-callback="onCaptchaExpired">
+  </div>
+
+  <script>
+    window.__captchaToken = null;
+    function onCaptchaSolved(token) { window.__captchaToken = token; }
+    function onCaptchaExpired() { window.__captchaToken = null; }
+  </script>
+</body>
+</html>
