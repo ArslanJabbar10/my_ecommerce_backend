@@ -5,6 +5,37 @@
   <script src="https://www.google.com/recaptcha/enterprise.js" async defer></script>
   <style>
     body { font-family: -apple-system, system-ui, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; }
+    #token-output {
+      margin-top: 20px;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #f7f7f7;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      word-break: break-all;
+      white-space: pre-wrap;
+      min-height: 40px;
+      display: none;
+    }
+    #token-output.visible { display: block; }
+    .token-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .token-label { font-weight: 600; font-size: 13px; }
+    .copy-btn {
+      font-size: 12px;
+      padding: 4px 10px;
+      border: 1px solid #ccc;
+      background: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .copy-btn:hover { background: #eee; }
+    .status { margin-top: 12px; font-size: 13px; color: #555; }
   </style>
 </head>
 <body>
@@ -17,10 +48,49 @@
        data-expired-callback="onCaptchaExpired">
   </div>
 
+  <div class="status" id="status">Waiting for captcha...</div>
+
+  <div id="token-output">
+    <div class="token-header">
+      <span class="token-label">Token</span>
+      <button class="copy-btn" id="copy-btn" type="button">Copy</button>
+    </div>
+    <div id="token-text"></div>
+  </div>
+
   <script>
     window.__captchaToken = null;
-    function onCaptchaSolved(token) { window.__captchaToken = token; }
-    function onCaptchaExpired() { window.__captchaToken = null; }
+
+    const statusEl = document.getElementById('status');
+    const outputEl = document.getElementById('token-output');
+    const tokenEl = document.getElementById('token-text');
+    const copyBtn = document.getElementById('copy-btn');
+
+    function onCaptchaSolved(token) {
+      window.__captchaToken = token;
+      tokenEl.textContent = token;
+      outputEl.classList.add('visible');
+      statusEl.textContent = 'Solved at ' + new Date().toLocaleTimeString();
+    }
+
+    function onCaptchaExpired() {
+      window.__captchaToken = null;
+      tokenEl.textContent = '';
+      outputEl.classList.remove('visible');
+      statusEl.textContent = 'Token expired — solve again.';
+    }
+
+    copyBtn.addEventListener('click', async () => {
+      if (!window.__captchaToken) return;
+      try {
+        await navigator.clipboard.writeText(window.__captchaToken);
+        const original = copyBtn.textContent;
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.textContent = original; }, 1500);
+      } catch (e) {
+        statusEl.textContent = 'Copy failed: ' + e.message;
+      }
+    });
   </script>
 </body>
 </html>
