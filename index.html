@@ -5,7 +5,7 @@
   <script src="https://www.google.com/recaptcha/enterprise.js" async defer></script>
   <style>
     body { font-family: -apple-system, system-ui, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; }
-    #token-output {
+    #token-output, #assessment-output {
       margin-top: 20px;
       padding: 12px;
       border: 1px solid #ddd;
@@ -18,7 +18,7 @@
       min-height: 40px;
       display: none;
     }
-    #token-output.visible { display: block; }
+    #token-output.visible, #assessment-output.visible { display: block; }
     .token-header {
       display: flex;
       justify-content: space-between;
@@ -36,6 +36,7 @@
     }
     .copy-btn:hover { background: #eee; }
     .status { margin-top: 12px; font-size: 13px; color: #555; }
+    #assessment-output.error { background: #fdecea; border-color: #f5c2c0; color: #611a15; }
   </style>
 </head>
 <body>
@@ -58,25 +59,71 @@
     <div id="token-text"></div>
   </div>
 
+  <div id="assessment-output">
+    <div class="token-header">
+      <span class="token-label">Assessment</span>
+    </div>
+    <div id="assessment-text"></div>
+  </div>
+
   <script>
+    // TODO: paste your deployed endpoint URL here.
+    const ENDPOINT_URL = 'https://captcha-service.skyopstech.com/api/assess-token';
+
     window.__captchaToken = null;
 
     const statusEl = document.getElementById('status');
     const outputEl = document.getElementById('token-output');
     const tokenEl = document.getElementById('token-text');
     const copyBtn = document.getElementById('copy-btn');
+    const assessmentEl = document.getElementById('assessment-output');
+    const assessmentTextEl = document.getElementById('assessment-text');
 
-    function onCaptchaSolved(token) {
+    async function onCaptchaSolved(token) {
       window.__captchaToken = token;
       tokenEl.textContent = token;
       outputEl.classList.add('visible');
-      statusEl.textContent = 'Solved at ' + new Date().toLocaleTimeString();
+      statusEl.textContent = 'Solved at ' + new Date().toLocaleTimeString() + ' — requesting assessment...';
+
+      assessmentEl.classList.remove('visible', 'error');
+      assessmentTextEl.textContent = '';
+
+      try {
+        const res = await fetch(ENDPOINT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+        });
+        const body = await res.text();
+        let parsed;
+        try { parsed = JSON.parse(body); } catch { parsed = body; }
+
+        if (!res.ok) {
+          assessmentEl.classList.add('visible', 'error');
+          assessmentTextEl.textContent =
+            'HTTP ' + res.status + '\n' +
+            (typeof parsed === 'string' ? parsed : JSON.stringify(parsed, null, 2));
+          statusEl.textContent = 'Assessment failed.';
+          return;
+        }
+
+        assessmentEl.classList.add('visible');
+        assessmentTextEl.textContent =
+          typeof parsed === 'string' ? parsed : JSON.stringify(parsed, null, 2);
+        statusEl.textContent = 'Assessment received.';
+      } catch (e) {
+        assessmentEl.classList.add('visible', 'error');
+        assessmentTextEl.textContent = 'Request failed: ' + e.message;
+        statusEl.textContent = 'Assessment failed.';
+      }
     }
 
     function onCaptchaExpired() {
       window.__captchaToken = null;
       tokenEl.textContent = '';
       outputEl.classList.remove('visible');
+      assessmentEl.classList.remove('visible', 'error');
+      assessmentTextEl.textContent = '';
       statusEl.textContent = 'Token expired — solve again.';
     }
 
